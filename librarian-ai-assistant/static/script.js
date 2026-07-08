@@ -1,7 +1,7 @@
 /* ============================================================
-   THE READING ROOM — client logic
+   VEDAM-NEXUS-AI — client logic
    Handles: token gate, voice capture, text input, chat bubbles,
-   conversation history, and audio playback.
+   conversation history, stop button, and audio playback.
    ============================================================ */
 
 (() => {
@@ -24,14 +24,9 @@
 
   // ---------- Session state ----------
   let apiToken = sessionStorage.getItem("librarian_token") || null;
-
-  // Conversation history — only committed after a successful round-trip.
-  // Each entry: { role: "user" | "model", text: "..." }
   let conversationHistory = [];
-
   let currentState = "idle"; // idle | listening | thinking | speaking
 
-  // Web Speech API
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognizer = null;
 
@@ -77,7 +72,7 @@
       sessionStorage.setItem("librarian_token", apiToken);
       enterReadingRoom();
     } catch {
-      showGateError("Couldn't reach the front desk. Check your connection and try again.");
+      showGateError("Couldn't reach the server. Check your connection and try again.");
     } finally {
       setValidating(false);
     }
@@ -89,7 +84,6 @@
     textInput.focus();
   }
 
-  /** Return to gate, wipe token and conversation so nothing leaks across sessions. */
   function goBackToGate(message) {
     sessionStorage.removeItem("librarian_token");
     apiToken = null;
@@ -106,32 +100,29 @@
     if (e.key === "Enter") validateToken();
   });
 
-  if (apiToken) {
-    enterReadingRoom();
-  }
+  if (apiToken) enterReadingRoom();
 
   // ============================================================
   // CHAT UI HELPERS
   // ============================================================
 
   function addBubble(role, text) {
-    /* role: "user" | "librarian" */
     const row = document.createElement("div");
     row.className = `message-row ${role === "user" ? "user-row" : "librarian-row"}`;
 
     const label = document.createElement("div");
     label.className = "bubble-label";
-    label.textContent = role === "user" ? "You" : "Librarian";
+    label.textContent = role === "user" ? "You" : "Nexus"; // renamed Librarian → Nexus
 
     const bubble = document.createElement("div");
     bubble.className = `bubble ${role === "user" ? "user-bubble" : "librarian-bubble"}`;
-    bubble.textContent = text;   // textContent, never innerHTML — XSS safe
+    bubble.textContent = text; // textContent, never innerHTML — XSS safe
 
     row.appendChild(label);
     row.appendChild(bubble);
     chatBox.appendChild(row);
     scrollToBottom();
-    return row;   // return the row so callers can remove it on failure
+    return row;
   }
 
   function scrollToBottom() {
@@ -148,7 +139,20 @@
     if (state !== "idle") micBtn.classList.add(state);
     micBtn.setAttribute("aria-pressed", state === "listening" ? "true" : "false");
 
-    const busy = state !== "idle";
+    // Update aria-label and tooltip to match current action
+    if (state === "speaking") {
+      micBtn.setAttribute("aria-label", "Stop speaking");
+      micBtn.title = "Tap to stop";
+    } else if (state === "listening") {
+      micBtn.setAttribute("aria-label", "Stop listening");
+      micBtn.title = "Tap to stop";
+    } else {
+      micBtn.setAttribute("aria-label", "Start speaking");
+      micBtn.title = "Tap to speak";
+    }
+
+    // Only block input while thinking — allow typing/sending while speaking
+    const busy = state === "thinking";
     sendBtn.disabled = busy;
     textInput.disabled = busy;
 
@@ -160,7 +164,7 @@
   }
 
   // ============================================================
-  // TEXT INPUT — auto-resize and send on Enter
+  // TEXT INPUT
   // ============================================================
 
   textInput.addEventListener("input", () => {
@@ -179,10 +183,14 @@
 
   function submitTextMessage() {
     const text = textInput.value.trim();
-    if (!text || currentState !== "idle") return;
+    if (!text || currentState === "thinking") return;
+
+    // If AI is speaking, stop it first then send
+    if (currentState === "speaking") stopAudio();
+
     textInput.value = "";
     textInput.style.height = "auto";
-    sendToLibrarian(text);
+    sendToNexus(text);
   }
 
   // ============================================================
@@ -219,7 +227,7 @@
     recognizer.onresult = (event) => {
       const heard = event.results[0][0].transcript.trim();
       if (heard) {
-        sendToLibrarian(heard);
+        sendToNexus(heard);
       } else {
         setState("idle");
         setStatus("");
@@ -235,25 +243,45 @@
   }
 
   micBtn.addEventListener("click", () => {
+    // ---- STOP: tap while AI is speaking ----
+    if (currentState === "speaking") {
+      stopAudio();
+      return;
+    }
+
+    // ---- Ignore while thinking ----
+    if (currentState === "thinking") return;
+
+    // ---- Toggle mic ----
     if (!recognizer) return;
     if (currentState === "listening") {
       recognizer.stop();
       return;
     }
-    if (currentState !== "idle") return;
+
     try {
       recognizer.start();
     } catch {
-      // start() throws if called twice too quickly — ignore
+      // start() throws if called too quickly — ignore
     }
   });
+
+  // ============================================================
+  // STOP AUDIO
+  // ============================================================
+
+  function stopAudio() {
+    responseAudio.pause();
+    responseAudio.currentTime = 0;
+    setState("idle");
+    setStatus("");
+  }
 
   // ============================================================
   // BACKEND COMMUNICATION
   // ============================================================
 
-  async function sendToLibrarian(userText) {
-    // Render user bubble immediately so the UI feels responsive.
+  async function sendToNexus(userText) {
     const userRow = addBubble("user", userText);
     setState("thinking");
     setStatus("Thinking…");
@@ -267,42 +295,36 @@
         },
         body: JSON.stringify({
           text: userText,
-          history: conversationHistory,   // history BEFORE this turn
+          history: conversationHistory,
         }),
       });
 
       if (res.status === 401) {
-        // Remove the optimistic bubble before leaving — the turn never happened.
         userRow.remove();
-        goBackToGate("Your card expired — please enter your key again.");
+        goBackToGate("Session expired — please enter your key again.");
         return;
       }
 
-      if (!res.ok) {
-        throw new Error("Bad response from server");
-      }
+      if (!res.ok) throw new Error("Bad response from server");
 
       const data = await res.json();
 
-      // Commit this exchange to history only after confirmed success.
       conversationHistory.push({ role: "user",  text: userText });
       conversationHistory.push({ role: "model", text: data.text });
 
-      addBubble("librarian", data.text);
+      addBubble("nexus", data.text);
       speakReply(data.audio_url);
 
     } catch {
-      // Remove the optimistic user bubble — the model never saw it,
-      // so the visible transcript and the model context stay in sync.
       userRow.remove();
       setState("idle");
-      setStatus("The librarian is momentarily unavailable — try again.");
+      setStatus("Nexus is unavailable right now — try again.");
     }
   }
 
   function speakReply(audioUrl) {
     setState("speaking");
-    setStatus("Speaking…");
+    setStatus("Speaking… tap ■ to stop");
 
     responseAudio.src = audioUrl;
 
@@ -317,7 +339,6 @@
     };
 
     responseAudio.play().catch(() => {
-      // Autoplay blocked by browser policy — text is already in the chat.
       setState("idle");
       setStatus("");
     });
