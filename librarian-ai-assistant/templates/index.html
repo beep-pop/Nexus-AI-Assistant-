@@ -1,1 +1,86 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Reading Room — Your Librarian Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- ======================================================= -->
+  <!-- SCREEN 1 — TOKEN GATE                                    -->
+  <!-- ======================================================= -->
+  <section id="gate-screen" class="screen">
+    <div class="card" role="form" aria-labelledby="gate-title">
+      <p class="eyebrow">Membership required</p>
+      <h1 id="gate-title">Show your library card</h1>
+      <p class="gate-copy">
+        Enter your Gemini API key to enter the Reading Room.
+        It's checked once, quietly, and never stored on our shelves.
+      </p>
+
+      <label for="token-input" class="visually-hidden">Gemini API key</label>
+      <input
+        id="token-input"
+        type="password"
+        inputmode="text"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Paste your API key…"
+      >
+
+      <button id="validate-btn" type="button">
+        <span class="btn-label">Enter the Reading Room</span>
+        <span class="btn-spinner" aria-hidden="true"></span>
+      </button>
+
+      <p id="gate-error" class="gate-error" role="alert" aria-live="assertive"></p>
+
+      <p class="gate-hint">
+        Don't have a key? Get one free from
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ======================================================= -->
+  <!-- SCREEN 2 — VOICE INTERFACE                               -->
+  <!-- ======================================================= -->
+  <section id="app-screen" class="screen hidden">
+
+    <header class="app-header">
+      <span class="stamp">EST. IN CODE</span>
+      <h1>The Reading Room</h1>
+      <p class="app-sub">Your librarian is listening. Just speak.</p>
+    </header>
+
+    <main class="listening-area">
+      <button id="mic-btn" type="button" aria-pressed="false" aria-label="Start speaking">
+        <span class="mic-ring ring-1"></span>
+        <span class="mic-ring ring-2"></span>
+        <span class="mic-core">
+          <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+            <path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/>
+          </svg>
+        </span>
+      </button>
+
+      <p id="status-text" class="status-text">Tap the light to begin</p>
+
+      <div id="transcript-log" class="transcript-log" aria-live="polite"></div>
+    </main>
+
+    <footer class="app-footer">
+      <span id="session-note">Speaking directly saves your tokens — no typing needed.</span>
+    </footer>
+  </section>
+
+  <audio id="response-audio" preload="none"></audio>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
