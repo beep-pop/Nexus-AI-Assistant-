@@ -1,37 +1,42 @@
 /* ============================================================
    THE READING ROOM — client logic
-   Handles: token gate validation, voice capture (Web Speech API),
-   sending speech to the Flask backend, and playing back the
-   librarian's spoken reply. No typing required anywhere.
+   Handles: token gate, voice capture, text input, chat bubbles,
+   conversation history, and audio playback.
    ============================================================ */
 
 (() => {
   "use strict";
 
   // ---------- Element references ----------
-  const gateScreen   = document.getElementById("gate-screen");
-  const appScreen    = document.getElementById("app-screen");
-  const tokenInput   = document.getElementById("token-input");
-  const validateBtn  = document.getElementById("validate-btn");
-  const gateError    = document.getElementById("gate-error");
+  const gateScreen        = document.getElementById("gate-screen");
+  const appScreen         = document.getElementById("app-screen");
+  const tokenInput        = document.getElementById("token-input");
+  const validateBtn       = document.getElementById("validate-btn");
+  const gateError         = document.getElementById("gate-error");
 
-  const micBtn       = document.getElementById("mic-btn");
-  const statusText   = document.getElementById("status-text");
-  const transcriptLog = document.getElementById("transcript-log");
-  const responseAudio = document.getElementById("response-audio");
+  const chatBox           = document.getElementById("chat-box");
+  const thinkingIndicator = document.getElementById("thinking-indicator");
+  const micBtn            = document.getElementById("mic-btn");
+  const textInput         = document.getElementById("text-input");
+  const sendBtn           = document.getElementById("send-btn");
+  const statusText        = document.getElementById("status-text");
+  const responseAudio     = document.getElementById("response-audio");
 
   // ---------- Session state ----------
-  // Kept in sessionStorage (cleared when the tab closes) — never localStorage,
-  // so the key doesn't linger on a shared computer.
   let apiToken = sessionStorage.getItem("librarian_token") || null;
 
-  // Web Speech API — Chrome/Edge only expose this under the webkit prefix.
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognizer = null;
+  // Conversation history — only committed after a successful round-trip.
+  // Each entry: { role: "user" | "model", text: "..." }
+  let conversationHistory = [];
+
   let currentState = "idle"; // idle | listening | thinking | speaking
 
+  // Web Speech API
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null;
+
   // ============================================================
-  // GATE SCREEN — token validation
+  // GATE SCREEN
   // ============================================================
 
   function showGateError(message) {
@@ -68,11 +73,10 @@
         return;
       }
 
-      // Success — remember the token for this tab session only.
       apiToken = value;
       sessionStorage.setItem("librarian_token", apiToken);
       enterReadingRoom();
-    } catch (err) {
+    } catch {
       showGateError("Couldn't reach the front desk. Check your connection and try again.");
     } finally {
       setValidating(false);
@@ -82,7 +86,19 @@
   function enterReadingRoom() {
     gateScreen.classList.add("hidden");
     appScreen.classList.remove("hidden");
-    setStatus("Tap the light to begin");
+    textInput.focus();
+  }
+
+  /** Return to gate, wipe token and conversation so nothing leaks across sessions. */
+  function goBackToGate(message) {
+    sessionStorage.removeItem("librarian_token");
+    apiToken = null;
+    conversationHistory = [];
+    setState("idle");
+    appScreen.classList.add("hidden");
+    gateScreen.classList.remove("hidden");
+    tokenInput.value = "";
+    showGateError(message);
   }
 
   validateBtn.addEventListener("click", validateToken);
@@ -90,36 +106,91 @@
     if (e.key === "Enter") validateToken();
   });
 
-  // If a token from an earlier action in this tab is still around, skip the gate.
   if (apiToken) {
     enterReadingRoom();
   }
 
   // ============================================================
-  // VOICE INTERFACE
+  // CHAT UI HELPERS
   // ============================================================
+
+  function addBubble(role, text) {
+    /* role: "user" | "librarian" */
+    const row = document.createElement("div");
+    row.className = `message-row ${role === "user" ? "user-row" : "librarian-row"}`;
+
+    const label = document.createElement("div");
+    label.className = "bubble-label";
+    label.textContent = role === "user" ? "You" : "Librarian";
+
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${role === "user" ? "user-bubble" : "librarian-bubble"}`;
+    bubble.textContent = text;   // textContent, never innerHTML — XSS safe
+
+    row.appendChild(label);
+    row.appendChild(bubble);
+    chatBox.appendChild(row);
+    scrollToBottom();
+    return row;   // return the row so callers can remove it on failure
+  }
+
+  function scrollToBottom() {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function setStatus(msg) {
+    statusText.textContent = msg;
+  }
 
   function setState(state) {
     currentState = state;
     micBtn.classList.remove("listening", "thinking", "speaking");
     if (state !== "idle") micBtn.classList.add(state);
     micBtn.setAttribute("aria-pressed", state === "listening" ? "true" : "false");
+
+    const busy = state !== "idle";
+    sendBtn.disabled = busy;
+    textInput.disabled = busy;
+
+    if (state === "thinking") {
+      thinkingIndicator.classList.remove("hidden");
+    } else {
+      thinkingIndicator.classList.add("hidden");
+    }
   }
 
-  function setStatus(text) {
-    statusText.textContent = text;
+  // ============================================================
+  // TEXT INPUT — auto-resize and send on Enter
+  // ============================================================
+
+  textInput.addEventListener("input", () => {
+    textInput.style.height = "auto";
+    textInput.style.height = Math.min(textInput.scrollHeight, 120) + "px";
+  });
+
+  textInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitTextMessage();
+    }
+  });
+
+  sendBtn.addEventListener("click", () => submitTextMessage());
+
+  function submitTextMessage() {
+    const text = textInput.value.trim();
+    if (!text || currentState !== "idle") return;
+    textInput.value = "";
+    textInput.style.height = "auto";
+    sendToLibrarian(text);
   }
 
-  function logLine(who, text) {
-    const line = document.createElement("span");
-    line.className = who; // "you" or "librarian"
-    line.textContent = text;
-    transcriptLog.appendChild(line);
-    transcriptLog.scrollTop = transcriptLog.scrollHeight;
-  }
+  // ============================================================
+  // VOICE INPUT
+  // ============================================================
 
   if (!SpeechRecognition) {
-    setStatus("Your browser can't listen — try Chrome or Edge.");
+    setStatus("Your browser can't listen — try Chrome or Edge for voice input.");
     micBtn.disabled = true;
   } else {
     recognizer = new SpeechRecognition();
@@ -135,10 +206,11 @@
 
     recognizer.onerror = (event) => {
       setState("idle");
+      setStatus("");
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setStatus("Microphone access was blocked — allow it and try again.");
+        setStatus("Microphone access was blocked — allow it in your browser settings.");
       } else if (event.error === "no-speech") {
-        setStatus("Didn't catch that. Tap the light and try again.");
+        setStatus("Didn't catch that — tap the mic and try again.");
       } else {
         setStatus("Something interrupted the listening. Try again.");
       }
@@ -147,44 +219,42 @@
     recognizer.onresult = (event) => {
       const heard = event.results[0][0].transcript.trim();
       if (heard) {
-        logLine("you", heard);
         sendToLibrarian(heard);
       } else {
         setState("idle");
-        setStatus("Tap the light to begin");
+        setStatus("");
       }
     };
 
     recognizer.onend = () => {
-      // If we're still in "listening" here, no result ever fired — reset.
       if (currentState === "listening") {
         setState("idle");
-        setStatus("Tap the light to begin");
+        setStatus("");
       }
     };
   }
 
   micBtn.addEventListener("click", () => {
     if (!recognizer) return;
-
     if (currentState === "listening") {
       recognizer.stop();
       return;
     }
-    if (currentState !== "idle") return; // busy thinking or speaking
-
+    if (currentState !== "idle") return;
     try {
       recognizer.start();
-    } catch (err) {
-      // start() throws if called twice in a row too quickly — ignore.
+    } catch {
+      // start() throws if called twice too quickly — ignore
     }
   });
 
   // ============================================================
-  // TALKING TO THE BACKEND
+  // BACKEND COMMUNICATION
   // ============================================================
 
-  async function sendToLibrarian(spokenText) {
+  async function sendToLibrarian(userText) {
+    // Render user bubble immediately so the UI feels responsive.
+    const userRow = addBubble("user", userText);
     setState("thinking");
     setStatus("Thinking…");
 
@@ -195,17 +265,16 @@
           "Content-Type": "application/json",
           "Authorization": "Bearer " + apiToken,
         },
-        body: JSON.stringify({ text: spokenText }),
+        body: JSON.stringify({
+          text: userText,
+          history: conversationHistory,   // history BEFORE this turn
+        }),
       });
 
       if (res.status === 401) {
-        // Token was rejected mid-session — send back to the gate.
-        sessionStorage.removeItem("librarian_token");
-        apiToken = null;
-        appScreen.classList.add("hidden");
-        gateScreen.classList.remove("hidden");
-        showGateError("Your card expired. Please enter your key again.");
-        setState("idle");
+        // Remove the optimistic bubble before leaving — the turn never happened.
+        userRow.remove();
+        goBackToGate("Your card expired — please enter your key again.");
         return;
       }
 
@@ -214,11 +283,20 @@
       }
 
       const data = await res.json();
-      logLine("librarian", data.text);
+
+      // Commit this exchange to history only after confirmed success.
+      conversationHistory.push({ role: "user",  text: userText });
+      conversationHistory.push({ role: "model", text: data.text });
+
+      addBubble("librarian", data.text);
       speakReply(data.audio_url);
-    } catch (err) {
+
+    } catch {
+      // Remove the optimistic user bubble — the model never saw it,
+      // so the visible transcript and the model context stay in sync.
+      userRow.remove();
       setState("idle");
-      setStatus("The librarian is momentarily unavailable. Try again.");
+      setStatus("The librarian is momentarily unavailable — try again.");
     }
   }
 
@@ -230,17 +308,19 @@
 
     responseAudio.onended = () => {
       setState("idle");
-      setStatus("Tap the light to begin");
+      setStatus("");
     };
 
     responseAudio.onerror = () => {
       setState("idle");
-      setStatus("Couldn't play that reply. Tap to try again.");
+      setStatus("Couldn't play that reply — tap the mic or type to continue.");
     };
 
     responseAudio.play().catch(() => {
+      // Autoplay blocked by browser policy — text is already in the chat.
       setState("idle");
-      setStatus("Tap the light to hear the reply.");
+      setStatus("");
     });
   }
+
 })();
