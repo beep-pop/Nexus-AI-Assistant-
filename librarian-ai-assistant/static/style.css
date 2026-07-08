@@ -1,1 +1,438 @@
+/* ============================================================
+   THE READING ROOM — stylesheet
+   Palette:
+     --parchment   #F1E7D0  (background, aged paper)
+     --parchment-2 #E7D9B8  (card surface, slightly darker paper)
+     --ink         #2B2116  (primary text, old ink)
+     --ink-soft    #5B4C3A  (secondary text)
+     --brass       #9C6B30  (accent, brass fittings / bookplate)
+     --brass-dark  #7A4F1E  (accent hover/active)
+     --moss        #4B5D45  (success / listening glow)
+     --rust        #A23E2E  (errors, sealing wax red)
+   Type:
+     Display: 'Fraunces' (warm, old-book serif with character)
+     Body:    'Source Serif 4'
+   ============================================================ */
 
+:root {
+  --parchment: #F1E7D0;
+  --parchment-2: #E7D9B8;
+  --ink: #2B2116;
+  --ink-soft: #5B4C3A;
+  --brass: #9C6B30;
+  --brass-dark: #7A4F1E;
+  --moss: #4B5D45;
+  --rust: #A23E2E;
+
+  --radius: 6px;
+  --shadow-soft: 0 8px 24px rgba(43, 33, 22, 0.12);
+  --shadow-deep: 0 16px 40px rgba(43, 33, 22, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(156, 107, 48, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 90%, rgba(75, 93, 69, 0.06), transparent 45%),
+    var(--parchment);
+  color: var(--ink);
+  font-family: 'Source Serif 4', Georgia, serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.screen {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ============================================================
+   SCREEN 1 — TOKEN GATE
+   ============================================================ */
+
+.card {
+  background: var(--parchment-2);
+  border: 1px solid rgba(43, 33, 22, 0.1);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-deep);
+  max-width: 420px;
+  width: 100%;
+  padding: 40px 36px;
+  position: relative;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brass);
+  box-shadow: 4px 0 0 var(--brass), 0 4px 0 var(--brass), 4px 4px 0 var(--brass);
+  opacity: 0.55;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  font-family: 'Source Serif 4', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--brass-dark);
+  margin: 0 0 10px;
+}
+
+.card h1 {
+  font-size: 1.7rem;
+  margin: 0 0 14px;
+  line-height: 1.25;
+}
+
+.gate-copy {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 26px;
+}
+
+#token-input {
+  width: 100%;
+  font-family: 'Source Serif 4', serif;
+  font-size: 1rem;
+  padding: 13px 14px;
+  border: 1px solid rgba(43, 33, 22, 0.25);
+  border-radius: 4px;
+  background: var(--parchment);
+  color: var(--ink);
+  margin-bottom: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#token-input::placeholder {
+  color: rgba(91, 76, 58, 0.55);
+}
+
+#token-input:focus {
+  outline: none;
+  border-color: var(--brass);
+  box-shadow: 0 0 0 3px rgba(156, 107, 48, 0.18);
+}
+
+#validate-btn {
+  width: 100%;
+  position: relative;
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  color: var(--parchment);
+  background: var(--brass);
+  border: none;
+  border-radius: 4px;
+  padding: 13px 18px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+#validate-btn:hover {
+  background: var(--brass-dark);
+}
+
+#validate-btn:active {
+  transform: translateY(1px);
+}
+
+#validate-btn:focus-visible {
+  outline: 3px solid var(--moss);
+  outline-offset: 2px;
+}
+
+#validate-btn:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.btn-spinner {
+  display: none;
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border: 2px solid rgba(241, 231, 208, 0.4);
+  border-top-color: var(--parchment);
+  border-radius: 50%;
+}
+
+#validate-btn.loading .btn-spinner {
+  display: block;
+  animation: spin 0.7s linear infinite;
+}
+
+#validate-btn.loading .btn-label {
+  opacity: 0.75;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.gate-error {
+  min-height: 1.2em;
+  font-size: 0.9rem;
+  color: var(--rust);
+  margin: 14px 0 0;
+}
+
+.gate-hint {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 22px 0 0;
+  text-align: center;
+}
+
+.gate-hint a {
+  color: var(--brass-dark);
+}
+
+/* ============================================================
+   SCREEN 2 — VOICE INTERFACE
+   ============================================================ */
+
+#app-screen {
+  flex-direction: column;
+  text-align: center;
+  gap: 6px;
+}
+
+.app-header {
+  margin-bottom: 32px;
+}
+
+.stamp {
+  display: inline-block;
+  font-family: 'Source Serif 4', serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  color: var(--brass-dark);
+  border: 1px solid var(--brass);
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-bottom: 14px;
+  opacity: 0.8;
+}
+
+.app-header h1 {
+  font-size: 2.1rem;
+  margin: 0 0 8px;
+}
+
+.app-sub {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.listening-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+#mic-btn {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mic-btn:focus-visible {
+  outline: 3px solid var(--moss);
+  outline-offset: 6px;
+}
+
+.mic-core {
+  position: relative;
+  z-index: 2;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--brass);
+  color: var(--parchment);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-soft);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+#mic-btn:hover .mic-core {
+  background: var(--brass-dark);
+  transform: scale(1.03);
+}
+
+.mic-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--brass);
+  opacity: 0;
+}
+
+#mic-btn.listening .mic-core {
+  background: var(--moss);
+  animation: corePulse 1.4s ease-in-out infinite;
+}
+
+#mic-btn.listening .mic-ring {
+  border-color: var(--moss);
+  animation: ringPulse 1.6s ease-out infinite;
+}
+
+#mic-btn.listening .ring-2 {
+  animation-delay: 0.5s;
+}
+
+#mic-btn.thinking .mic-core {
+  background: var(--brass);
+  animation: thinkGlow 1s ease-in-out infinite;
+}
+
+#mic-btn.speaking .mic-core {
+  background: var(--moss);
+}
+
+@keyframes corePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(75, 93, 69, 0.35); }
+  50% { box-shadow: 0 0 0 14px rgba(75, 93, 69, 0); }
+}
+
+@keyframes ringPulse {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes thinkGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.status-text {
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  min-height: 1.4em;
+  margin: 0;
+}
+
+.transcript-log {
+  max-width: 460px;
+  width: 100%;
+  min-height: 1.4em;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  padding: 0 12px;
+}
+
+.transcript-log .you,
+.transcript-log .librarian {
+  display: block;
+  margin: 6px 0;
+}
+
+.transcript-log .you::before {
+  content: "You said: ";
+  color: var(--brass-dark);
+  font-weight: 600;
+}
+
+.transcript-log .librarian::before {
+  content: "Librarian: ";
+  color: var(--moss);
+  font-weight: 600;
+}
+
+.app-footer {
+  margin-top: 44px;
+  font-size: 0.78rem;
+  color: rgba(91, 76, 58, 0.7);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .card {
+    padding: 32px 24px;
+  }
+  .app-header h1 {
+    font-size: 1.7rem;
+  }
+  #mic-btn {
+    width: 108px;
+    height: 108px;
+  }
+  .mic-core {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  #mic-btn.listening .mic-core,
+  #mic-btn.listening .mic-ring,
+  #mic-btn.thinking .mic-core,
+  .btn-spinner {
+    animation: none !important;
+  }
+}
