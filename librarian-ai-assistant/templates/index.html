@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,35 +47,72 @@
   </section>
 
   <!-- ======================================================= -->
-  <!-- SCREEN 2 — VOICE INTERFACE                               -->
+  <!-- SCREEN 2 — CHAT INTERFACE                                -->
   <!-- ======================================================= -->
   <section id="app-screen" class="screen hidden">
 
-    <header class="app-header">
-      <span class="stamp">EST. IN CODE</span>
-      <h1>Vedam-Nexus-AI</h1>
-      <p class="app-sub">Your librarian is listening. Just speak.</p>
-    </header>
+    <div class="chat-shell">
 
-    <main class="listening-area">
-      <button id="mic-btn" type="button" aria-pressed="false" aria-label="Start speaking">
-        <span class="mic-ring ring-1"></span>
-        <span class="mic-ring ring-2"></span>
-        <span class="mic-core">
-          <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
-            <path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/>
+      <header class="app-header">
+        <span class="stamp">EST. IN CODE</span>
+        <h1>Vedam-Nexus-AI</h1>
+        <p class="app-sub">Speak or type — your librarian is always listening.</p>
+      </header>
+
+      <!-- Chat message area -->
+      <div id="chat-box" class="chat-box" role="log" aria-live="polite" aria-label="Conversation">
+        <div class="welcome-message">
+          <div class="bubble librarian-bubble">
+            Welcome to the Reading Room. You may speak to me using the microphone,
+            or type your question below. How may I help you today?
+          </div>
+        </div>
+      </div>
+
+      <!-- Thinking indicator (hidden by default) -->
+      <div id="thinking-indicator" class="thinking-indicator hidden" aria-hidden="true">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+
+      <!-- Input row -->
+      <div class="input-row">
+        <button
+          id="mic-btn"
+          type="button"
+          aria-pressed="false"
+          aria-label="Start speaking"
+          title="Hold to speak"
+        >
+          <span class="mic-ring ring-1"></span>
+          <span class="mic-ring ring-2"></span>
+          <span class="mic-core">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/>
+            </svg>
+          </span>
+        </button>
+
+        <div class="text-input-wrap">
+          <textarea
+            id="text-input"
+            rows="1"
+            placeholder="Type your question… or tap the mic to speak"
+            autocomplete="off"
+            spellcheck="true"
+            aria-label="Type a message"
+          ></textarea>
+        </div>
+
+        <button id="send-btn" type="button" aria-label="Send message" title="Send">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
-        </span>
-      </button>
+        </button>
+      </div>
 
-      <p id="status-text" class="status-text">Tap the light to begin</p>
+      <p id="status-text" class="status-text" aria-live="polite"></p>
 
-      <div id="transcript-log" class="transcript-log" aria-live="polite"></div>
-    </main>
-
-    <footer class="app-footer">
-      <span id="session-note">Speaking directly saves your tokens — no typing needed.</span>
-    </footer>
+    </div><!-- /chat-shell -->
   </section>
 
   <audio id="response-audio" preload="none"></audio>
