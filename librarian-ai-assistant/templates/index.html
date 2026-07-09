@@ -17,16 +17,21 @@
     <div class="aurora-orb orb-3"></div>
   </div>
 
-  <!-- SCREEN 1 — TOKEN GATE -->
+  <!-- ======================================================= -->
+  <!-- SCREEN 1 — TOKEN GATE                                    -->
+  <!-- ======================================================= -->
   <section id="gate-screen" class="screen">
     <div class="card" role="form" aria-labelledby="gate-title">
+
       <div class="card-glow"></div>
+
       <p class="eyebrow">Access required</p>
       <h1 id="gate-title">Hey, who are you?</h1>
       <p class="gate-copy">
         Drop your Gemini API key below to get in. It's only used in your session
         and never saved anywhere.
       </p>
+
       <label for="token-input" class="visually-hidden">Gemini API key</label>
       <input
         id="token-input"
@@ -36,11 +41,14 @@
         spellcheck="false"
         placeholder="Paste your Gemini API key…"
       >
+
       <button id="validate-btn" type="button">
         <span class="btn-label">Let me in</span>
         <span class="btn-spinner" aria-hidden="true"></span>
       </button>
+
       <p id="gate-error" class="gate-error" role="alert" aria-live="assertive"></p>
+
       <p class="gate-hint">
         No key yet? Grab one free from
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
@@ -48,8 +56,11 @@
     </div>
   </section>
 
-  <!-- SCREEN 2 — CHAT INTERFACE -->
+  <!-- ======================================================= -->
+  <!-- SCREEN 2 — CHAT INTERFACE                                -->
+  <!-- ======================================================= -->
   <section id="app-screen" class="screen hidden">
+
     <div class="chat-shell">
 
       <header class="app-header">
@@ -58,6 +69,7 @@
         <p class="app-sub">Your brilliant friend who knows everything. Ask anything.</p>
       </header>
 
+      <!-- Chat message area -->
       <div id="chat-box" class="chat-box" role="log" aria-live="polite" aria-label="Conversation">
         <div class="welcome-message">
           <div class="bubble librarian-bubble">
@@ -66,10 +78,12 @@
         </div>
       </div>
 
+      <!-- Thinking indicator (hidden by default) -->
       <div id="thinking-indicator" class="thinking-indicator hidden" aria-hidden="true">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       </div>
 
+      <!-- Input row -->
       <div class="input-row">
         <button
           id="mic-btn"
@@ -119,6 +133,7 @@
   </section>
 
   <audio id="response-audio" preload="none"></audio>
+
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
